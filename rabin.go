@@ -38,47 +38,42 @@ func isPrime(random io.Reader, p *big.Int, count int) (bool, error) {
 	}
 	// p is odd number
 	s, d := exp(p)
-	for i := 0; i < count; i++ {
-		ok, err := isPrimeOnce(random, p, s, d)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-func isPrimeOnce(random io.Reader, p, s, d *big.Int) (bool, error) {
-	p = new(big.Int).Set(p)
 	max := new(big.Int).Sub(p, one)
 
-	a := new(big.Int).Set(zero)
-	for a.Cmp(zero) == 0 {
-		var err error
-		a, err = rand.Int(random, p)
-		if err != nil {
-			return false, err
+	var (
+		a      = new(big.Int)
+		tmpa   = new(big.Int)
+		tmpexp = new(big.Int)
+	)
+
+out:
+	for i := 0; i < count; i++ {
+		a.Set(zero)
+		for a.Cmp(zero) == 0 {
+			// a is not zero
+			var err error
+			a, err = rand.Int(random, p)
+			if err != nil {
+				return false, err
+			}
 		}
-	}
-	{
-		// not prime if a^d!=1(mod p)
-		atmp := new(big.Int).Set(a)
-		atmp = a.Exp(atmp, d, p)
-		if atmp.Cmp(one) == 0 {
-			return true, nil
+		tmpa = tmpa.Set(a).Exp(tmpa, d, p)
+		if tmpa.Cmp(one) == 0 {
+			// maybe prime if a^d==1(mod p)
+			continue out
 		}
-	}
-	aa := new(big.Int)
-	pw := new(big.Int)
-	for r := big.NewInt(0); r.Cmp(s) < 0; r.Add(r, one) {
-		aa.Set(a)
-		pw.Exp(two, r, nil).Mul(pw, d)
-		aa.Exp(aa, pw, p)
-		if aa.Cmp(max) == 0 {
-			return true, nil
+
+		for r := big.NewInt(0); r.Cmp(s) < 0; r.Add(r, one) {
+			tmpa.Set(a)
+			tmpexp.Exp(two, r, nil).Mul(tmpexp, d)
+			tmpa.Exp(tmpa, tmpexp, p)
+			if tmpa.Cmp(max) == 0 {
+				// maybe prime if a^(2^r*d)==-1==n-1(mod p)
+				continue out
+			}
 		}
+		// does not satisfy the prime number condition
+		return false, nil
 	}
-	return false, nil
+	return true, nil
 }
