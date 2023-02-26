@@ -24,6 +24,10 @@ func exp(p *big.Int) (s, d *big.Int) {
 	}
 }
 
+func IsPrime(n int64) (bool, error) {
+	return isPrime(rand.Reader, big.NewInt(n), 20)
+}
+
 func isPrime(random io.Reader, p *big.Int, count int) (bool, error) {
 	p = new(big.Int).Set(p)
 	if p.Cmp(one) == 0 {
